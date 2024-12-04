@@ -12,7 +12,7 @@ class Tensor:
         self._operation = _operation # Operation that produced this node
 
     def __repr__(self):
-        return f'Tensor({self.data}, gradient={self.gradient}, label={self.label})'
+        return f'Tensor[{self.data}, gradient={self.gradient}, label={self.label}]'
 
     def __str__(self):
         return str(self.data)
@@ -58,15 +58,15 @@ class Tensor:
 
     # POWER OPERATORS
     def __pow__(self, other):
-        assert isinstance(other, (int, float)), 'Currently only supporting int or float'
         other = other if isinstance(other, Tensor) else Tensor(other, label=str(other))
         output = Tensor(self.data**other.data, _children=(self, other))
-        output._operation = f'^{other.data}' if other.data > 0 else f'^{other.data}\n(Division)'
+        output._operation = f'^{other.label}' if other.data > 0 else f'^{other.label}\n(Division)'
         output.label = f'({self.label})' if len(self._children) > 0 else self.label
         output.label += f'^({other.label})' if len(other._children) > 0 else f'^{other.label}'
 
         def _backward():
             self.gradient += other.data * self.data**(other.data - 1) * output.gradient
+            other.gradient += np.log(self.data) * self.data**other.data * output.gradient
 
         output._backward = _backward
         return output
