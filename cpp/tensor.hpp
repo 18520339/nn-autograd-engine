@@ -23,7 +23,7 @@ private:
         function<void(Tensor *)> dfs = [&](Tensor *node) {
             if (visited.find(node) == visited.end()) { // If the node has not been visited
                 visited.insert(node);
-                for (auto &child : node->children)
+                for (const TensorPtr &child : node->children)
                     dfs(child.get());
                 sorted_nodes.push_back(node);
             }
@@ -60,7 +60,7 @@ public:
 
     // Overloading '+' operator for addition. Using friend to access private members of the class
     friend TensorPtr operator+(const TensorPtr &lhs, const TensorPtr &rhs) {
-        auto output = make_shared<Tensor>(lhs->data + rhs->data, set<TensorPtr>{lhs, rhs}, "+");
+        TensorPtr output = make_shared<Tensor>(lhs->data + rhs->data, set<TensorPtr>{lhs, rhs}, "+");
         output->label = lhs->label + " + " + rhs->label;
         output->local_backward = [lhs, rhs](const Tensor *parent_ptr) {
             // The gradient needs to be accumulated to avoid overwriting when performing operations for the same node
@@ -74,7 +74,7 @@ public:
 
     // Overloading '*' operator for multiplication
     friend TensorPtr operator*(const TensorPtr &lhs, const TensorPtr &rhs) {
-        auto output = make_shared<Tensor>(lhs->data * rhs->data, set<TensorPtr>{lhs, rhs}, "*");
+        TensorPtr output = make_shared<Tensor>(lhs->data * rhs->data, set<TensorPtr>{lhs, rhs}, "*");
         output->label = (lhs->children.size() > 0 ? "(" + lhs->label + ")" : lhs->label) + " * ";
         output->label += (rhs->children.size() > 0 ? "(" + rhs->label + ")" : rhs->label);
         output->local_backward = [lhs, rhs](const Tensor *parent_ptr) {
@@ -90,7 +90,7 @@ public:
         if (base->data == 0.0 && exponent->data < 0.0) throw invalid_argument("Division by 0.");
 
         string operation = (exponent->data > 0 ? "^" + exponent->label + "\n(Division)" : "^" + exponent->label);
-        auto output = make_shared<Tensor>(std::pow(base->data, exponent->data), set<TensorPtr>{base, exponent}, operation);
+        TensorPtr output = make_shared<Tensor>(std::pow(base->data, exponent->data), set<TensorPtr>{base, exponent}, operation);
         output->label = (base->children.size() > 0 ? "(" + base->label + ")" : base->label) + "^";
         output->label += (exponent->children.size() > 0 ? "(" + exponent->label + ")" : exponent->label);
 
@@ -118,7 +118,7 @@ public:
     }
 
     friend TensorPtr exp(const TensorPtr &tensor) { // Exponential function
-        auto output = make_shared<Tensor>(std::exp(tensor->data), set<TensorPtr>{tensor}, "exp");
+        TensorPtr output = make_shared<Tensor>(std::exp(tensor->data), set<TensorPtr>{tensor}, "exp");
         output->label = "exp(" + tensor->label + ")";
         output->local_backward = [tensor](const Tensor *parent_ptr) {
             tensor->gradient += parent_ptr->data * parent_ptr->gradient;
@@ -127,7 +127,7 @@ public:
     }
 
     friend TensorPtr log(const TensorPtr &tensor) { // Logarithm function
-        auto output = make_shared<Tensor>(std::log(tensor->data), set<TensorPtr>{tensor}, "log");
+        TensorPtr output = make_shared<Tensor>(std::log(tensor->data), set<TensorPtr>{tensor}, "log");
         output->label = "log(" + tensor->label + ")";
         output->local_backward = [tensor](const Tensor *parent_ptr) {
             tensor->gradient += (1.0 / tensor->data) * parent_ptr->gradient;

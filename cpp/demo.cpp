@@ -11,7 +11,7 @@ int main() {
     auto z = sigmoid(y);
     z->backward();
 
-    for (TensorPtr node : {x1, x2, w1, w2, b})
+    for (auto node : {x1, x2, w1, w2, b})
         cout << *node << endl;
     return 0;
 }
