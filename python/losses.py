@@ -1,6 +1,6 @@
 import numpy as np
 
-def mse(y_trues, y_preds):
+def mean_squared_error(y_trues, y_preds):
     return sum((y - y_pred)**2 for y, y_pred in zip(y_trues, y_preds)) / len(y_trues)
 
 def binary_crossentropy(y_trues, y_preds): # Bernoulli cross-entropy
