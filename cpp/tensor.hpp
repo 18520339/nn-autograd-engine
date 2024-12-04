@@ -38,7 +38,14 @@ public:
     string label = "";     // Optional Label for the tensor (e.g., "a", "b").
 
     // Constructor
-    Tensor(double _data, const string _label = "") : data(_data), label(_label) {}
+    Tensor(double _data, const string _label = "") : data(_data) {
+        if (_label.empty()) {
+            ostringstream ss;
+            ss.precision(3);
+            ss << fixed << _data;
+            label = ss.str();
+        } else label = _label;
+    }
     Tensor(double _data, const set<TensorPtr> &_children, const string &_operation) : data(_data), children(_children), operation(_operation) {}
 
     // Utility to print the tensor (similar to Python's __repr__)
@@ -92,7 +99,7 @@ public:
 
     // Overloading '/' operator for division and '-' operator for subtraction
     friend TensorPtr operator/(const TensorPtr &numerator, const TensorPtr &denominator) {
-        TensorPtr power_minus_one = pow(denominator, make_shared<Tensor>(-1.0, "-1.0"));
+        TensorPtr power_minus_one = pow(denominator, make_shared<Tensor>(-1.0));
         if (numerator->data == 1.0) return power_minus_one;         // 1 / b = b^-1
         return numerator * power_minus_one; // a / b = a * b^-1
     }
@@ -103,7 +110,7 @@ public:
 
     // UNARY OPERATORS
     friend TensorPtr operator-(const TensorPtr &tensor) {  // Negation function
-        return tensor * make_shared<Tensor>(-1.0, "-1.0"); // -a = a * -1
+        return tensor * make_shared<Tensor>(-1.0); // -a = a * -1
     }
 
     friend TensorPtr exp(const TensorPtr &tensor) { // Exponential function
@@ -126,13 +133,13 @@ public:
 
     // ACTIVATION FUNCTIONS
     friend TensorPtr sigmoid(const TensorPtr &tensor) {
-        TensorPtr one = make_shared<Tensor>(1.0, "1.0");
+        TensorPtr one = make_shared<Tensor>(1.0);
         return one / (one + exp(-tensor));
     }
 
     friend TensorPtr tanh(const TensorPtr &tensor) {
-        TensorPtr one = make_shared<Tensor>(1.0, "1.0");
-        TensorPtr exp2x = exp(tensor * make_shared<Tensor>(2.0, "2.0"));
+        TensorPtr one = make_shared<Tensor>(1.0);
+        TensorPtr exp2x = exp(tensor * make_shared<Tensor>(2.0));
         return (exp2x - one) / (exp2x + one);
     }
 
