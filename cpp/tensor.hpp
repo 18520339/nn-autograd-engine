@@ -38,15 +38,19 @@ public:
     string label = "";     // Optional Label for the tensor (e.g., "a", "b").
 
     // Constructor
-    Tensor(double _data, const string _label = "") : data(_data) {
+    Tensor(double _data, const string _label = "") : data(_data), label(_label) {}
+    Tensor(double _data, const set<TensorPtr> &_children, const string &_operation) : data(_data), children(_children), operation(_operation) {}
+
+    // Static method to shorten the creation of a tensor
+    static TensorPtr create(double _data, string _label = "") {
         if (_label.empty()) {
             ostringstream ss;
             ss.precision(3);
             ss << fixed << _data;
-            label = ss.str();
-        } else label = _label;
+            _label = ss.str();
+        }
+        return make_shared<Tensor>(_data, _label);
     }
-    Tensor(double _data, const set<TensorPtr> &_children, const string &_operation) : data(_data), children(_children), operation(_operation) {}
 
     // Utility to print the tensor (similar to Python's __repr__)
     friend ostream &operator<<(ostream &os, const Tensor &tensor) {
@@ -100,8 +104,8 @@ public:
     // Overloading '/' operator for division and '-' operator for subtraction
     friend TensorPtr operator/(const TensorPtr &numerator, const TensorPtr &denominator) {
         TensorPtr power_minus_one = pow(denominator, make_shared<Tensor>(-1.0));
-        if (numerator->data == 1.0) return power_minus_one;         // 1 / b = b^-1
-        return numerator * power_minus_one; // a / b = a * b^-1
+        if (numerator->data == 1.0) return power_minus_one; // 1 / b = b^-1
+        return numerator * power_minus_one;                 // a / b = a * b^-1
     }
 
     friend TensorPtr operator-(const TensorPtr &lhs, const TensorPtr &rhs) {
@@ -109,8 +113,8 @@ public:
     }
 
     // UNARY OPERATORS
-    friend TensorPtr operator-(const TensorPtr &tensor) {  // Negation function
-        return tensor * make_shared<Tensor>(-1.0); // -a = a * -1
+    friend TensorPtr operator-(const TensorPtr &tensor) { // Negation function
+        return tensor * make_shared<Tensor>(-1.0);        // -a = a * -1
     }
 
     friend TensorPtr exp(const TensorPtr &tensor) { // Exponential function
@@ -150,8 +154,8 @@ public:
     // BACKPROPAGATION
     void backward() {
         vector<Tensor *> sorted_nodes = topological_sort();
-        gradient = 1.0; // Starting point (usually dL/dL = 1)
-        for (long i = sorted_nodes.size() - 1; i >= 0; i--)
+        gradient = 1.0;                                       // Starting point (usually dL/dL = 1)
+        for (size_t i = sorted_nodes.size(); i-- > 0;)        // Check if i > 0 before decrementing it
             sorted_nodes[i]->local_backward(sorted_nodes[i]); // Compute local gradients
     }
 };
