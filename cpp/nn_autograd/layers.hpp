@@ -80,8 +80,11 @@ private:
     int input_size, output_size;
 
 public:
-    Dense(int input_size, int output_size, const string &_activation = "", function<double(int, int)> init_func = nullptr, const string &_name = "Dense")
-        : input_size(input_size), output_size(output_size), ParamsContainer(_activation, _name) {
+    const int &get_input_size() const { return input_size; }
+    const int &get_output_size() const { return output_size; }
+
+    Dense(int _input_size, int _output_size, const string &_activation = "", function<double(int, int)> init_func = nullptr, const string &_name = "Dense")
+        : input_size(_input_size), output_size(_output_size), ParamsContainer(_activation, _name) {
         if (init_func) initializer = [=]() { return init_func(input_size, output_size); };
         for (int i = 0; i < output_size; ++i)
             // Construct the element directly, avoiding the overhead of creating
