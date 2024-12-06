@@ -1,10 +1,11 @@
 #pragma once
 #include "tensor.hpp"
-template <typename T> // Handle different input types
+template <typename OutputType>
 
 class Loss {
 private:
-    static TensorPtr validate_and_initialize_sum(const vector<T> &y_trues, const vector<T> &y_preds, string message = "Number of samples must match and > 0") {
+    static TensorPtr validate_and_initialize_sum(const vector<OutputType> &y_trues, const vector<OutputType> &y_preds,
+                                                 string message = "Number of samples must match and non-zero") {
         if (y_trues.size() != y_preds.size() || y_trues.empty()) throw invalid_argument(message);
         return make_shared<Tensor>(0.0); // Initialize sum to 0
     }
