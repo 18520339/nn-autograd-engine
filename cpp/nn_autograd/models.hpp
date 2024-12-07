@@ -5,28 +5,29 @@
 #include <any>
 #include <iomanip>
 #include <unordered_map>
+#include <variant>
 template <typename OutputType>
 
 class Sequential {
 private:
     vector<TensorPtr> parameters;
-    vector<shared_ptr<Dense>> layers; // Currently only support Fully connected layers
+    vector<Dense> layers; // Currently only support Fully connected layers
     function<TensorPtr(const vector<OutputType> &, const vector<OutputType> &)> loss_func;
     unordered_map<string, function<double(const vector<OutputType> &, const vector<OutputType> &)>> metric_funcs;
     unordered_map<string, vector<any>> history;
 
 public:
     vector<TensorPtr> &get_parameters() { return parameters; }
-    vector<shared_ptr<Dense>> &get_layers() { return layers; }
+    vector<Dense> &get_layers() { return layers; }
     unordered_map<string, vector<any>> &get_history() { return history; }
 
-    Sequential(const vector<shared_ptr<Dense>> &_layers, // Constructor
+    Sequential(const vector<Dense> &_layers, // Constructor
                function<TensorPtr(const vector<OutputType> &, const vector<OutputType> &)> _loss_func,
                unordered_map<string, function<double(const vector<OutputType> &, const vector<OutputType> &)>> _metric_funcs = {})
         : layers(_layers), loss_func(_loss_func), metric_funcs(_metric_funcs) {
         // Collect all parameters across layers
-        for (const auto &layer : layers) {
-            vector<TensorPtr> layer_params = layer->get_parameters();
+        for (auto &layer : layers) {
+            vector<TensorPtr> layer_params = layer.get_parameters();
             parameters.insert(parameters.end(), layer_params.begin(), layer_params.end());
         }
         // Initialize history with default keys
@@ -35,10 +36,11 @@ public:
             any_cast<vector<double>>(history[name]) = vector<double>(); // Add metric keys
     }
 
-    OutputType forward(vector<TensorPtr> inputs) { // Forward propagation
+    variant<TensorPtr, vector<TensorPtr>> forward(vector<TensorPtr> inputs) { // Forward propagation for input features
         for (int i = 0; i < layers.size(); ++i)
-            inputs = layers[i]->forward(inputs);
-        return inputs.size() == 1 ? OutputType(inputs[0]) : OutputType(inputs);
+            inputs = layers[i].forward(inputs);
+        if constexpr (is_same_v<OutputType, TensorPtr>) return inputs[0];
+        return inputs;
     }
 
     void summary() {
@@ -50,12 +52,12 @@ public:
              << string(55, '-') << endl;
 
         size_t total_params = 0;
-        for (const auto &layer : layers) {
-            size_t num_params = layer->get_parameters().size();
+        for (auto &layer : layers) {
+            size_t num_params = layer.get_parameters().size();
             total_params += num_params;
 
-            cout << setw(12) << layer->get_name()
-                 << setw(20) << layer->get_output_size()
+            cout << setw(12) << layer.get_name()
+                 << setw(20) << layer.get_output_size()
                  << setw(15) << num_params << endl;
         }
         cout << string(55, '-') << endl;
@@ -78,7 +80,7 @@ public:
                 // Forward pass
                 vector<OutputType> predictions;
                 for (const vector<TensorPtr> &inputs : X_batch)
-                    predictions.push_back(forward(inputs));
+                    predictions.push_back(get<(is_same_v<OutputType, TensorPtr>) ? 0 : 1>(forward(inputs)));
 
                 // Backpropagation and update parameters with Gradient Descent
                 TensorPtr loss = loss_func(y_batch, predictions);
@@ -95,9 +97,8 @@ public:
                 // Update history and metrics
                 history["step"].push_back(step);
                 history["loss"].push_back(loss->data);
-
                 cout << "Epoch " << epoch + 1 << "/" << epochs
-                     << " - Step " << step + 1
+                     << " - Step " << step + 1 << "/" << steps_per_epoch
                      << " - Loss: " << setprecision(4) << loss->data;
 
                 for (const auto &[name, func] : metric_funcs) {
