@@ -44,24 +44,38 @@ public:
     }
 
     void summary() {
-        cout << "Model Summary:" << endl
-             << string(55, '-') << endl
-             << setw(12) << "Layer"
-             << setw(20) << "Output Shape"
-             << setw(15) << "Param #" << endl
-             << string(55, '-') << endl;
+        // Calculate dynamic widths based on content
+        size_t layer_width = 10, shape_width = 15, params_width = 12; // Minimum width
+        for (auto &layer : layers) {                                  // Find maximum widths needed
+            layer_width = max(layer_width, layer.get_name().length() + 2);
+            shape_width = max(shape_width, to_string(layer.get_output_size()).length() + 2);
+            params_width = max(params_width, to_string(layer.get_parameters().size()).length() + 2);
+        }
+        int total_width = layer_width + shape_width + params_width + 4; // Calculate total width for the table
 
+        // Print header
+        cout << "Model Summary:" << endl
+             << string(total_width, '=') << endl;
+        cout << left << setw(layer_width) << " Layer"
+             << right << setw(shape_width) << " Output Shape"
+             << right << setw(params_width) << "Param #" << endl;
+        cout << string(total_width, '-') << endl;
+
+        // Print layers
         size_t total_params = 0;
         for (auto &layer : layers) {
             size_t num_params = layer.get_parameters().size();
             total_params += num_params;
 
-            cout << setw(12) << layer.get_name()
-                 << setw(20) << layer.get_output_size()
-                 << setw(15) << num_params << endl;
+            cout << left << setw(layer_width) << (" " + layer.get_name())
+                 << right << setw(shape_width) << (" " + to_string(layer.get_output_size()))
+                 << right << setw(params_width) << num_params << endl;
         }
-        cout << string(55, '-') << endl;
+
+        // Print footer
+        cout << string(total_width, '=') << endl;
         cout << "Total params: " << total_params << endl;
+        cout << string(total_width, '=') << endl;
     }
 
     void train(const vector<vector<TensorPtr>> &X_train, const vector<OutputType> &y_train,
