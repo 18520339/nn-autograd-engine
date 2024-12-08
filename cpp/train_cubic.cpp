@@ -1,6 +1,7 @@
 #include "nn_autograd/layers.hpp"
 #include "nn_autograd/losses.hpp"
 #include "nn_autograd/models.hpp"
+#include "nn_autograd/optim.hpp"
 
 int main() {
     vector<vector<TensorPtr>> X_train; // Features: [2x³, 3x², -3x]
@@ -20,8 +21,8 @@ int main() {
         Loss<TensorPtr>::mean_squared_error);
     model.summary();
 
-    double learning_rate = 0.05;
     int epochs = 100, batch_size = X_train.size();
-    model.train(X_train, y_train, epochs, learning_rate, batch_size);
+    LearningRateScheduler *lr_scheduler = new WarmUpAndDecayScheduler(0.05, 5, 10, 0.9);
+    model.train(X_train, y_train, epochs, lr_scheduler, batch_size);
     return 0;
 }

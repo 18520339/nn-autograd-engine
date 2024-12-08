@@ -1,7 +1,8 @@
-// #pragma once
+#pragma once
 #include "layers.hpp"
 #include "losses.hpp"
 #include "metrics.hpp"
+#include "optim.hpp"
 #include <any>
 #include <iomanip>
 #include <unordered_map>
@@ -79,13 +80,17 @@ public:
     }
 
     void train(const vector<vector<TensorPtr>> &X_train, const vector<OutputType> &y_train,
-               int epochs = 100, double learning_rate = 0.01, int batch_size = 1, double clip_value = 0.0) {
+               const int &epochs = 100, const variant<LearningRateScheduler *, double> &learning_rate = 0.01,
+               const int &batch_size = 1, const double &clip_value = 0.0) {
         int data_size = X_train.size(), steps_per_epoch = data_size / batch_size;
+        double scheduled_lr;
+        if (holds_alternative<LearningRateScheduler *>(learning_rate))
+            history["learning_rate"] = {}; // Add learning rate key
 
-        for (int epoch = 0; epoch < epochs; ++epoch) {
-            history["epoch"].push_back(epoch);
+        for (int epoch = 0, step = 1; epoch < epochs; ++epoch) {
+            history["epoch"].push_back(epoch + 1);
 
-            for (auto [batch_start, step] = make_tuple(0, 0); batch_start < data_size; batch_start += batch_size, ++step) {
+            for (int batch_start = 0, batch_step = 0; batch_start < data_size; batch_start += batch_size, ++batch_step, ++step) {
                 // Prevents index out of range when batch_size doesn't divide the data size
                 int last_idx = min(batch_start + batch_size, data_size);
                 vector<vector<TensorPtr>> X_batch(X_train.begin() + batch_start, X_train.begin() + last_idx);
@@ -100,25 +105,35 @@ public:
                 TensorPtr loss = loss_func(y_batch, predictions);
                 loss->backward();
 
+                if (holds_alternative<LearningRateScheduler *>(learning_rate))
+                    scheduled_lr = (*get<0>(learning_rate))(step);
+                else
+                    scheduled_lr = get<1>(learning_rate);
+
                 for (TensorPtr &param : parameters) {
                     // Clip gradients to ensure gradients stay within a manageable range, especially for ReLU
                     // For example: clip(500, -10, 10) = 10
                     if (clip_value > 0.0) param->gradient = max(-clip_value, min(clip_value, param->gradient));
-                    param->data -= learning_rate * param->gradient; // Update parameter
-                    param->gradient = 0.0;                          // Reset gradient
+                    param->data -= scheduled_lr * param->gradient; // Update parameter
+                    param->gradient = 0.0;                         // Reset gradient
                 }
 
-                // Update history and metrics
+                // Update history and log the training progress
                 history["step"].push_back(step);
                 history["loss"].push_back(loss->data);
                 cout << "Epoch " << epoch + 1 << "/" << epochs
-                     << " - Step " << step + 1 << "/" << steps_per_epoch
-                     << " - Loss: " << setprecision(4) << loss->data;
+                     << "\t- Step " << batch_step + 1 << "/" << steps_per_epoch
+                     << "\t- Loss: " << setprecision(4) << loss->data;
+
+                if (holds_alternative<LearningRateScheduler *>(learning_rate)) {
+                    history["learning_rate"].push_back(scheduled_lr);
+                    cout << "\t- Learning Rate: " << setprecision(4) << scheduled_lr;
+                }
 
                 for (const auto &[name, func] : metric_funcs) {
                     double metric_value = func(y_batch, predictions);
                     history[name].push_back(metric_value);
-                    cout << " - " << name << ": " << setprecision(4) << metric_value;
+                    cout << "\t- " << name << ": " << setprecision(4) << metric_value;
                 }
                 cout << endl;
             }
