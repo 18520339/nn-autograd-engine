@@ -1,14 +1,14 @@
 #pragma once
 #include "layers.hpp"
+#include "logging.hpp"
 #include "losses.hpp"
 #include "metrics.hpp"
 #include "optim.hpp"
 #include <any>
-#include <iomanip>
-#include <unordered_map>
+#include <thread>
 #include <variant>
-template <typename OutputType>
 
+template <typename OutputType>
 class Sequential {
 private:
     vector<TensorPtr> parameters;
@@ -82,15 +82,22 @@ public:
     void train(const vector<vector<TensorPtr>> &X_train, const vector<OutputType> &y_train,
                const int &epochs = 100, const variant<LearningRateScheduler *, double> &learning_rate = 0.01,
                const int &batch_size = 1, const double &clip_value = 0.0) {
-        int data_size = X_train.size(), steps_per_epoch = data_size / batch_size;
+        int data_size = X_train.size(), steps_per_epoch = ceil(data_size / batch_size);
         double scheduled_lr;
-        if (holds_alternative<LearningRateScheduler *>(learning_rate))
-            history["learning_rate"] = {}; // Add learning rate key
 
-        for (int epoch = 0, step = 1; epoch < epochs; ++epoch) {
+        TrainingLogger logger(epochs, steps_per_epoch);
+        if (holds_alternative<LearningRateScheduler *>(learning_rate)) {
+            history["learning_rate"] = {}; // Add learning rate key
+            logger.set_display_lr(true);
+        }
+
+        for (int epoch = 0, epoch_step = 1; epoch < epochs; ++epoch) {
+            logger.start_epoch();
             history["epoch"].push_back(epoch + 1);
 
-            for (int batch_start = 0, batch_step = 0; batch_start < data_size; batch_start += batch_size, ++batch_step, ++step) {
+            for (int batch_start = 0, batch_step = 0; batch_start < data_size; batch_start += batch_size, ++batch_step, ++epoch_step) {
+                logger.start_batch();
+
                 // Prevents index out of range when batch_size doesn't divide the data size
                 int last_idx = min(batch_start + batch_size, data_size);
                 vector<vector<TensorPtr>> X_batch(X_train.begin() + batch_start, X_train.begin() + last_idx);
@@ -106,7 +113,7 @@ public:
                 loss->backward();
 
                 if (holds_alternative<LearningRateScheduler *>(learning_rate))
-                    scheduled_lr = (*get<0>(learning_rate))(step);
+                    scheduled_lr = (*get<0>(learning_rate))(epoch_step);
                 else
                     scheduled_lr = get<1>(learning_rate);
 
@@ -119,25 +126,22 @@ public:
                 }
 
                 // Update history and log the training progress
-                history["step"].push_back(step);
+                history["step"].push_back(epoch_step);
                 history["loss"].push_back(loss->data);
-                cout << "Epoch " << epoch + 1 << "/" << epochs
-                     << "\t- Step " << batch_step + 1 << "/" << steps_per_epoch
-                     << "\t- Loss: " << setprecision(4) << loss->data;
-
-                if (holds_alternative<LearningRateScheduler *>(learning_rate)) {
+                if (holds_alternative<LearningRateScheduler *>(learning_rate))
                     history["learning_rate"].push_back(scheduled_lr);
-                    cout << "\t- Learning Rate: " << setprecision(4) << scheduled_lr;
-                }
 
+                unordered_map<string, double> metrics;
                 for (const auto &[name, func] : metric_funcs) {
                     double metric_value = func(y_batch, predictions);
                     history[name].push_back(metric_value);
-                    cout << "\t- " << name << ": " << setprecision(4) << metric_value;
+                    metrics[name] = metric_value;
                 }
-                cout << endl;
+                // this_thread::sleep_for(seconds(1)); // Simulate training time
+                logger.log_progress(epoch + 1, batch_step + 1, loss->data, metrics, scheduled_lr);
             }
         }
+        logger.end_training();
     }
 
     // vector<vector<TensorPtr>> predict(const vector<vector<TensorPtr>> &X) {
