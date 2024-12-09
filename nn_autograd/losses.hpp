@@ -1,7 +1,7 @@
 #pragma once
 #include "tensor.hpp"
-template <typename OutputType>
 
+template <typename OutputType>
 class Loss {
 private:
     static TensorPtr validate_and_initialize_sum(const vector<OutputType> &y_trues, const vector<OutputType> &y_preds,

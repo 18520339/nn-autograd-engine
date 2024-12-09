@@ -34,7 +34,7 @@ public:
         // Initialize history with default keys
         history = {{"epoch", {}}, {"step", {}}, {"loss", {}}};
         for (const auto &[name, _] : metric_funcs)
-            any_cast<vector<double>>(history[name]) = vector<double>(); // Add metric keys
+            history[name] = {}; // Add metric keys
     }
 
     variant<TensorPtr, vector<TensorPtr>> forward(vector<TensorPtr> inputs) { // Forward propagation for input features
