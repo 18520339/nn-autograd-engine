@@ -1,7 +1,4 @@
-#include "nn_autograd/layers.hpp"
-#include "nn_autograd/losses.hpp"
 #include "nn_autograd/models.hpp"
-#include "nn_autograd/optim.hpp"
 
 int main() {
     vector<vector<TensorPtr>> X_train; // Features: [2x³, 3x², -3x]
@@ -14,11 +11,12 @@ int main() {
         y_train.push_back(make_shared<Tensor>(2 * pow(x, 3) + 3 * pow(x, 2) - 3 * x));
     }
 
-    Sequential<TensorPtr> model( // Initialize model
+    using OutputType = TensorPtr; // vector<TensorPtr> for one-hot encoded labels
+    Sequential<OutputType> model( // Initialize model
         {Dense(3, 4, "relu", Initializers::he_uniform, "Dense0"),
          Dense(4, 3, "relu", Initializers::he_uniform, "Dense1"),
          Dense(3, 1, "linear", Initializers::he_uniform, "Dense2")},
-        Loss<TensorPtr>::mean_squared_error);
+        Loss<OutputType>::mean_squared_error);
     model.summary();
 
     int epochs = 100, batch_size = X_train.size();
