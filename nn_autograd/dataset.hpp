@@ -5,12 +5,10 @@
 #include <sstream>
 #include <string>
 #include <unordered_map>
-#include <variant>
 #include <vector>
 using namespace std;
 
-variant<pair<vector<vector<any>>, vector<any>>, vector<vector<any>>>
-load_csv(const string &file_path, bool skip_header = true, bool split_last = true) {
+pair<vector<vector<any>>, vector<any>> Xy_from_csv(const string &file_path, bool skip_header = true) {
     vector<vector<any>> X_raw;
     vector<any> y_raw;
     unordered_map<string, int> class_to_index = {};
@@ -32,16 +30,13 @@ load_csv(const string &file_path, bool skip_header = true, bool split_last = tru
                 row.push_back(cell_value);
             }
         }
-        if (split_last) {
-            X_raw.insert(X_raw.end(), row.begin(), prev(row.end()));
-            if (row.back().type() == typeid(string)) {
-                string class_label = any_cast<string>(row.back());
-                if (class_to_index.find(class_label) == class_to_index.end()) // Not found
-                    class_to_index[class_label] = class_index++;
-                y_raw.push_back(class_to_index[class_label]);
-            } else y_raw.push_back(any_cast<int>(row.back()));
-        } else X_raw.push_back(row);
+        X_raw.insert(X_raw.end(), row.begin(), prev(row.end()));
+        if (row.back().type() == typeid(string)) {
+            string class_label = any_cast<string>(row.back());
+            if (class_to_index.find(class_label) == class_to_index.end()) // Not found
+                class_to_index[class_label] = class_index++;
+            y_raw.push_back(class_to_index[class_label]);
+        } else y_raw.push_back(any_cast<int>(row.back()));
     }
-    if (split_last) return make_pair(X_raw, y_raw);
-    return X_raw;
+    return {X_raw, y_raw};
 }
