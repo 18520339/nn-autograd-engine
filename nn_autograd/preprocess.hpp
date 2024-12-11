@@ -1,7 +1,38 @@
 #pragma once
-#include "tensor.hpp"
-#include <any>
+#include "converters.hpp"
+#include <fstream>
 #include <random>
+#include <unordered_map>
+
+pair<vector<vector<any>>, vector<any>> Xy_from_csv(const string &file_path, bool skip_header = true) {
+    vector<vector<any>> X_raw;
+    vector<any> y_raw;
+    unordered_map<string, int> class_to_index = {};
+    int class_index = 0;
+
+    ifstream file(file_path);
+    string line, cell_value;
+    if (skip_header) getline(file, line); // Skip header
+
+    while (getline(file, line)) {
+        if (line.empty()) continue;
+        stringstream line_stream(line);
+        vector<any> row;
+
+        // Auto-detect the data type of each cell and store it in the row
+        while (getline(line_stream, cell_value, ','))
+            row.push_back(str_to_any(cell_value));
+        X_raw.emplace_back(row.begin(), row.end() - 1);
+
+        if (row.back().type() == typeid(string)) {
+            string class_label = any_cast<string>(row.back());
+            if (class_to_index.find(class_label) == class_to_index.end()) // Not found
+                class_to_index[class_label] = class_index++;
+            y_raw.push_back(class_to_index[class_label]);
+        } else y_raw.push_back(row.back());
+    }
+    return {X_raw, y_raw};
+}
 
 pair<vector<vector<any>>, vector<any>> shuffle_data(const vector<vector<any>> &X, const vector<any> &y) {
     vector<size_t> indices(X.size());
@@ -32,35 +63,6 @@ train_test_split(const vector<vector<any>> &X, const vector<any> &y, float test_
     return {X_train, X_test, y_train, y_test};
 }
 
-class TensorConverter {
-public:
-    static vector<TensorPtr> to_1d_tensors(const vector<double> &data) {
-        size_t n_samples = data.size();
-        vector<TensorPtr> tensors_1d(n_samples);
-        for (size_t i = 0; i < n_samples; ++i)
-            tensors_1d[i] = make_shared<Tensor>(data[i]);
-        return tensors_1d;
-    }
-
-    static vector<vector<TensorPtr>> to_2d_tensors(const vector<vector<double>> &data) {
-        size_t n_samples = data.size();
-        int n_features = data[0].size();
-        vector<vector<TensorPtr>> tensors_2d(n_samples, vector<TensorPtr>(n_features));
-        for (size_t i = 0; i < n_samples; ++i)
-            for (int j = 0; j < n_features; ++j)
-                tensors_2d[i][j] = make_shared<Tensor>(data[i][j]);
-        return tensors_2d;
-    }
-
-    static vector<vector<TensorPtr>> to_onehot_tensors(const vector<int> &y_raw, int num_classes) {
-        size_t n_samples = y_raw.size();
-        vector<vector<TensorPtr>> encoded_y(n_samples, vector<TensorPtr>(num_classes, make_shared<Tensor>(0.0)));
-        for (int i = 0; i < n_samples; ++i)
-            encoded_y[i][y_raw[i]] = make_shared<Tensor>(1.0);
-        return encoded_y;
-    }
-};
-
 class StandardScaler {
 private:
     vector<double> means, stds;
@@ -73,12 +75,12 @@ private:
 public:
     vector<vector<TensorPtr>> fit_transform_to_tensors(const vector<vector<any>> &X) {
         vector<vector<double>> X_scaled = fit_transform(X);
-        return TensorConverter::to_2d_tensors(X_scaled);
+        return to_2d_tensors(X_scaled);
     }
 
     vector<vector<TensorPtr>> transform_to_tensors(const vector<vector<any>> &X) {
         vector<vector<double>> X_scaled = transform(X);
-        return TensorConverter::to_2d_tensors(X_scaled);
+        return to_2d_tensors(X_scaled);
     }
 
     vector<vector<double>> fit_transform(const vector<vector<any>> &X) {
