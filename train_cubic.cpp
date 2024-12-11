@@ -11,12 +11,11 @@ int main() {
         y_train.push_back(Tensor::create(2 * pow(x, 3) + 3 * pow(x, 2) - 3 * x));
     }
 
-    using OutputType = TensorPtr; // vector<TensorPtr> for one-hot encoded labels
-    Sequential<OutputType> model( // Initialize model
+    Sequential<TensorPtr> model( // Initialize model
         {Dense(3, 4, "relu", Initializers::he_uniform, "Dense0"),
          Dense(4, 3, "relu", Initializers::he_uniform, "Dense1"),
          Dense(3, 1, "linear", Initializers::he_uniform, "Dense2")},
-        Loss<OutputType>::mean_squared_error);
+        Loss::mean_squared_error);
     model.summary();
 
     int epochs = 100, batch_size = X_train.size();
