@@ -30,16 +30,6 @@ train_test_split(const vector<vector<any>> &X, const vector<any> &y, float test_
     vector<any> y_train(y_shuffled.begin(), y_shuffled.begin() + train_size);
     vector<any> y_test(y_shuffled.begin() + train_size, y_shuffled.end());
     return {X_train, X_test, y_train, y_test};
-
-    //     for (size_t i = 0; i < indices.size(); i++) {
-    //     if (i < train_size) {
-    //         X_train.push_back(X[indices[i]]);
-    //         y_train.push_back(y[indices[i]]);
-    //     } else {
-    //         X_test.push_back(X[indices[i]]);
-    //         y_test.push_back(y[indices[i]]);
-    //     }
-    // }
 }
 
 class TensorConverter {
@@ -74,54 +64,49 @@ public:
 class StandardScaler {
 private:
     vector<double> means, stds;
-    int n_samples, n_features;
+    const double any_to_double(const any &value) {
+        if (value.type() == typeid(double)) return any_cast<double>(value);
+        else if (value.type() == typeid(int)) return any_cast<int>(value);
+        throw runtime_error("Unsupported data type in StandardScaler");
+    }
 
 public:
-    vector<vector<TensorPtr>> fit_transform_tensors(const vector<vector<double>> &X) {
+    vector<vector<TensorPtr>> fit_transform_to_tensors(const vector<vector<any>> &X) {
         vector<vector<double>> X_scaled = fit_transform(X);
         return TensorConverter::to_2d_tensors(X_scaled);
     }
 
-    vector<vector<TensorPtr>> transform_tensors(const vector<vector<double>> &X) {
+    vector<vector<TensorPtr>> transform_to_tensors(const vector<vector<any>> &X) {
         vector<vector<double>> X_scaled = transform(X);
         return TensorConverter::to_2d_tensors(X_scaled);
     }
 
-    vector<vector<double>> fit_transform(const vector<vector<double>> &X) {
-        n_samples = X.size();
-        n_features = X[0].size();
+    vector<vector<double>> fit_transform(const vector<vector<any>> &X) {
+        int n_samples = X.size(), n_features = X[0].size();
         means.resize(n_features, 0.0);
         stds.resize(n_features, 0.0);
 
         // Calculate mean and std for each feature
         for (int f = 0; f < n_features; ++f) {
-            for (const vector<double> &sample : X)
-                means[f] += sample[f];
+            for (const vector<any> &sample : X)
+                means[f] += any_to_double(sample[f]);
             means[f] /= n_samples;
 
-            for (const vector<double> &sample : X)
-                stds[f] += pow(sample[f] - means[f], 2);
+            for (const vector<any> &sample : X)
+                stds[f] += pow(any_to_double(sample[f]) - means[f], 2);
             stds[f] = sqrt(stds[f] / n_samples);
             if (stds[f] == 0) stds[f] = 1.0; // Prevent division by 0
         }
         return transform(X);
     }
 
-    vector<vector<double>> transform(const vector<vector<double>> &X) {
+    vector<vector<double>> transform(const vector<vector<any>> &X) {
+        int n_samples = X.size(), n_features = X[0].size();
         vector<vector<double>> X_scaled(n_samples, vector<double>(n_features));
+
         for (int i = 0; i < n_samples; ++i)
-            for (int j = 0; j < n_features; ++j)
-                X_scaled[i][j] = (X[i][j] - means[j]) / stds[j];
+            for (int f = 0; f < n_features; ++f)
+                X_scaled[i][f] = (any_to_double(X[i][f]) - means[f]) / stds[f];
         return X_scaled;
     }
-
-    // for (size_t j = 0; j < X_raw[0].size(); j++) {
-    //     double sum = 0, sq_sum = 0;
-    //     for (size_t i = 0; i < X_raw.size(); i++) {
-    //         sum += X_raw[i][j];
-    //         sq_sum += X_raw[i][j] * X_raw[i][j];
-    //     }
-    //     means[j] = sum / X_raw.size();
-    //     stds[j] = sqrt(sq_sum / X_raw.size() - means[j] * means[j]);
-    // }
 };
