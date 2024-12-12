@@ -2,17 +2,22 @@
 #include "converters.hpp"
 #include <fstream>
 #include <random>
+#include <stdexcept>
 #include <unordered_map>
 
-pair<vector<vector<any>>, vector<any>> Xy_from_csv(const string &file_path, bool skip_header = true) {
+pair<vector<vector<any>>, vector<any>> Xy_from_csv(const string &file_path, const int y_idx = -1, const bool header = false) {
+    ifstream file(file_path);
+    if (!file.is_open()) {
+        cerr << "Could not open file: " << file_path << endl;
+        throw runtime_error("Could not open file: " + file_path);
+    }
+    string line, cell_value;
+    if (!header) getline(file, line); // Skip header
+
     vector<vector<any>> X_raw;
     vector<any> y_raw;
     unordered_map<string, int> class_to_index = {};
     int class_index = 0;
-
-    ifstream file(file_path);
-    string line, cell_value;
-    if (skip_header) getline(file, line); // Skip header
 
     while (getline(file, line)) {
         if (line.empty()) continue;
@@ -22,14 +27,17 @@ pair<vector<vector<any>>, vector<any>> Xy_from_csv(const string &file_path, bool
         // Auto-detect the data type of each cell and store it in the row
         while (getline(line_stream, cell_value, ','))
             row.push_back(str_to_any(cell_value));
-        X_raw.emplace_back(row.begin(), row.end() - 1);
 
-        if (row.back().type() == typeid(string)) {
-            string class_label = any_cast<string>(row.back());
+        int target_col = y_idx < 0 ? row.size() + y_idx : y_idx;                          // Negative index means counting from the end
+        X_raw.emplace_back(row.begin(), row.begin() + target_col);                        // Initialize with all columns except the target
+        X_raw.back().insert(X_raw.back().end(), row.begin() + target_col + 1, row.end()); // Append the rest of the columns
+
+        if (row[target_col].type() == typeid(string)) {
+            string class_label = any_cast<string>(row[target_col]);
             if (class_to_index.find(class_label) == class_to_index.end()) // Not found
                 class_to_index[class_label] = class_index++;
             y_raw.push_back(class_to_index[class_label]);
-        } else y_raw.push_back(row.back());
+        } else y_raw.push_back(row[target_col]);
     }
     return {X_raw, y_raw};
 }

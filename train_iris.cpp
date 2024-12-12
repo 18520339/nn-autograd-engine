@@ -3,7 +3,7 @@
 
 int main() {
     // Load and split the Iris dataset
-    const auto [X_raw, y_raw] = Xy_from_csv("iris.csv");
+    const auto [X_raw, y_raw] = Xy_from_csv("data/iris.csv", -1, false);
     auto [X_train, X_test, y_train, y_test] = train_test_split(X_raw, y_raw, 0.2);
 
     // Standardize numerical features
