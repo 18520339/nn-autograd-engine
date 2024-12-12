@@ -5,8 +5,8 @@
 #include "metrics.hpp"
 #include "optim.hpp"
 #include <any>
-#include <thread>
 #include <variant>
+// #include <thread>
 
 template <typename OutputType>
 class Sequential {
@@ -144,10 +144,10 @@ public:
         logger.end_training();
     }
 
-    // vector<vector<TensorPtr>> predict(const vector<vector<TensorPtr>> &X) {
-    //     vector<vector<TensorPtr>> predictions;
-    //     for (const vector<TensorPtr> &inputs : X)
-    //         predictions.push_back(this->forward(inputs));
-    //     return predictions;
-    // }
+    vector<OutputType> predict(const vector<vector<TensorPtr>> &X) {
+        vector<OutputType> predictions;
+        for (const vector<TensorPtr> &inputs : X)
+            predictions.push_back(get<(is_same_v<OutputType, TensorPtr>) ? 0 : 1>(forward(inputs)));
+        return predictions;
+    }
 };
