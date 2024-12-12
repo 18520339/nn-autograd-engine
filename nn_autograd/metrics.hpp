@@ -11,11 +11,10 @@ public: // TODO: Inject calculation into training loop
     static double accuracy(const vector<OutputType> &y_trues, const vector<OutputType> &y_preds) {
         if constexpr (is_same_v<OutputType, vector<TensorPtr>>) { // Check for one-hot encoded labels
             int correct = 0;
+            auto compare_func = [](const TensorPtr &a, const TensorPtr &b) { return a->data < b->data; };
             for (size_t i = 0; i < y_trues.size(); ++i) {
-                auto true_max = max_element(y_trues[i].begin(), y_trues[i].end()); // Find index of max value in true labels
-                auto pred_max = max_element(                                       // Find index of max value in predictions
-                    y_preds[i].begin(), y_preds[i].end(),
-                    [](const TensorPtr &a, const TensorPtr &b) { return a->data < b->data; });
+                auto true_max = max_element(y_trues[i].begin(), y_trues[i].end(), compare_func); // Find index of max value in true labels
+                auto pred_max = max_element(y_preds[i].begin(), y_preds[i].end(), compare_func); // Find index of max value in predictions
                 size_t true_idx = distance(y_trues[i].begin(), true_max);
                 size_t pred_idx = distance(y_preds[i].begin(), pred_max);
                 if (true_idx == pred_idx) correct++;
