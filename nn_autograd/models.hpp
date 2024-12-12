@@ -82,7 +82,7 @@ public:
     void train(const vector<vector<TensorPtr>> &X_train, const vector<OutputType> &y_train,
                const int &epochs = 100, const variant<LearningRateScheduler *, double> &learning_rate = 0.01,
                const int &batch_size = 1, const double &clip_value = 0.0) {
-        int data_size = X_train.size(), steps_per_epoch = ceil(data_size / batch_size);
+        int data_size = X_train.size(), steps_per_epoch = ceil(static_cast<double>(data_size) / batch_size);
         double scheduled_lr;
 
         TrainingLogger logger(epochs, steps_per_epoch);
