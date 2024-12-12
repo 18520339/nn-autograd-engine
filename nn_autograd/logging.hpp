@@ -18,11 +18,9 @@ private:
     string format_time(int seconds) {
         int hours = seconds / 3600, minutes = (seconds % 3600) / 60;
         stringstream ss;
-        if (hours > 0) ss << hours << "h ";
-        if (minutes > 0) ss << minutes << "m ";
-
-        ss << setfill('0') << setw(2) << minutes << ":"
-           << setfill('0') << setw(2) << seconds % 60;
+        if (hours > 0) ss << setfill('0') << setw(2) << hours << "h";
+        ss << setfill('0') << setw(2) << minutes << (hours > 0 ? "m" : ":");
+        ss << setfill('0') << setw(2) << seconds % 60 << (hours > 0 ? "s" : "");
         return ss.str();
     }
 
