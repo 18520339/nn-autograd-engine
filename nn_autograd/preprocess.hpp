@@ -11,7 +11,7 @@ pair<vector<vector<any>>, vector<any>> Xy_from_csv(const string &file_path, cons
         cerr << "Could not open file: " << file_path << endl;
         throw runtime_error("Could not open file: " + file_path);
     }
-    string line, cell_value;
+    string line;
     if (!header) getline(file, line); // Skip header
 
     vector<vector<any>> X_raw;
@@ -21,20 +21,23 @@ pair<vector<vector<any>>, vector<any>> Xy_from_csv(const string &file_path, cons
 
     while (getline(file, line)) {
         if (line.empty()) continue;
-        stringstream line_stream(line);
-        vector<any> row;
 
-        // Auto-detect the data type of each cell and store it in the row
-        while (getline(line_stream, cell_value, ','))
+        vector<any> row;
+        size_t start = 0, end = 0;
+        while ((end = line.find(',', start)) != string::npos) {
+            string cell_value = line.substr(start, end - start);
             row.push_back(str_to_any(cell_value));
+            start = end + 1;
+        }
+        row.push_back(str_to_any(line.substr(start))); // Add the last cell
 
         int target_col = y_idx < 0 ? row.size() + y_idx : y_idx;                          // Negative index means counting from the end
         X_raw.emplace_back(row.begin(), row.begin() + target_col);                        // Initialize with all columns except the target
         X_raw.back().insert(X_raw.back().end(), row.begin() + target_col + 1, row.end()); // Append the rest of the columns
 
         if (row[target_col].type() == typeid(string)) {
-            string class_label = any_cast<string>(row[target_col]);
-            if (class_to_index.find(class_label) == class_to_index.end()) // Not found
+            const string &class_label = any_cast<string>(row[target_col]); // & is necessary to avoid copying
+            if (class_to_index.find(class_label) == class_to_index.end())  // Not found
                 class_to_index[class_label] = class_index++;
             y_raw.push_back(class_to_index[class_label]);
         } else y_raw.push_back(row[target_col]);
@@ -74,11 +77,6 @@ train_test_split(const vector<vector<any>> &X, const vector<any> &y, float test_
 class StandardScaler {
 private:
     vector<double> means, stds;
-    const double any_to_double(const any &value) {
-        if (value.type() == typeid(double)) return any_cast<double>(value);
-        else if (value.type() == typeid(int)) return any_cast<int>(value);
-        throw runtime_error("Unsupported data type in StandardScaler");
-    }
 
 public:
     vector<vector<TensorPtr>> fit_transform_to_tensors(const vector<vector<any>> &X) {
