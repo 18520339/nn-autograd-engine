@@ -16,20 +16,26 @@ any str_to_any(const string &str) { // Convert string to int, double, or string
     return str;
 }
 
-vector<int> anys_to_ints(const vector<any> &input) {
-    vector<int> result;
-    result.reserve(input.size());
-    for (const any &a : input)
-        result.push_back(any_cast<int>(a));
-    return result;
+double any_to_double(const any &input) {
+    if (input.type() == typeid(double)) return any_cast<double>(input);
+    else if (input.type() == typeid(int)) return any_cast<int>(input);
+    throw runtime_error("Invalid type for conversion to double");
 }
 
-vector<double> anys_to_doubles(const vector<any> &input) {
-    vector<double> result;
-    result.reserve(input.size());
-    for (const any &a : input)
-        result.push_back(any_cast<double>(a));
-    return result;
+vector<int> anys_to_ints(const vector<any> &inputs) {
+    vector<int> results;
+    results.reserve(inputs.size());
+    for (const any &a : inputs)
+        results.push_back(any_cast<int>(a));
+    return results;
+}
+
+vector<double> anys_to_doubles(const vector<any> &inputs) {
+    vector<double> results;
+    results.reserve(inputs.size());
+    for (const any &a : inputs)
+        results.push_back(any_to_double(a));
+    return results;
 }
 
 vector<TensorPtr> to_1d_tensors(const vector<double> &data) {
@@ -53,7 +59,7 @@ vector<vector<TensorPtr>> to_2d_tensors(const vector<vector<double>> &data) {
 vector<vector<TensorPtr>> to_onehot_tensors(const vector<int> &y_raw, int num_classes) {
     size_t n_samples = y_raw.size();
     vector<vector<TensorPtr>> encoded_y(n_samples, vector<TensorPtr>(num_classes, make_shared<Tensor>(0.0)));
-    for (int i = 0; i < n_samples; ++i)
+    for (size_t i = 0; i < n_samples; ++i)
         encoded_y[i][y_raw[i]] = make_shared<Tensor>(1.0);
     return encoded_y;
 }
