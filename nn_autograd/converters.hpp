@@ -38,7 +38,23 @@ vector<double> anys_to_doubles(const vector<any> &inputs) {
     return results;
 }
 
-vector<TensorPtr> to_1d_tensors(const vector<double> &data) {
+vector<vector<int>> anys_to_1hots(const vector<any> &y_raw, int num_classes) {
+    size_t n_samples = y_raw.size();
+    vector<vector<int>> encoded_y(n_samples, vector<int>(num_classes, 0));
+    for (size_t i = 0; i < n_samples; ++i)
+        encoded_y[i][any_cast<int>(y_raw[i])] = 1;
+    return encoded_y;
+}
+
+vector<vector<TensorPtr>> anys_to_1hot_tensors(const vector<any> &y_raw, int num_classes) {
+    size_t n_samples = y_raw.size();
+    vector<vector<TensorPtr>> encoded_y(n_samples, vector<TensorPtr>(num_classes, make_shared<Tensor>(0.0)));
+    for (size_t i = 0; i < n_samples; ++i)
+        encoded_y[i][any_cast<int>(y_raw[i])] = make_shared<Tensor>(1.0);
+    return encoded_y;
+}
+
+vector<TensorPtr> doubles_to_1d_tensors(const vector<double> &data) {
     size_t n_samples = data.size();
     vector<TensorPtr> tensors_1d(n_samples);
     for (size_t i = 0; i < n_samples; ++i)
@@ -46,7 +62,7 @@ vector<TensorPtr> to_1d_tensors(const vector<double> &data) {
     return tensors_1d;
 }
 
-vector<vector<TensorPtr>> to_2d_tensors(const vector<vector<double>> &data) {
+vector<vector<TensorPtr>> doubles_to_2d_tensors(const vector<vector<double>> &data) {
     size_t n_samples = data.size();
     int n_features = data[0].size();
     vector<vector<TensorPtr>> tensors_2d(n_samples, vector<TensorPtr>(n_features));
@@ -54,12 +70,4 @@ vector<vector<TensorPtr>> to_2d_tensors(const vector<vector<double>> &data) {
         for (int j = 0; j < n_features; ++j)
             tensors_2d[i][j] = make_shared<Tensor>(data[i][j]);
     return tensors_2d;
-}
-
-vector<vector<TensorPtr>> to_onehot_tensors(const vector<int> &y_raw, int num_classes) {
-    size_t n_samples = y_raw.size();
-    vector<vector<TensorPtr>> encoded_y(n_samples, vector<TensorPtr>(num_classes, make_shared<Tensor>(0.0)));
-    for (size_t i = 0; i < n_samples; ++i)
-        encoded_y[i][y_raw[i]] = make_shared<Tensor>(1.0);
-    return encoded_y;
 }
