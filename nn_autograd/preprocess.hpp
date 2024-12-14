@@ -79,16 +79,6 @@ private:
     vector<double> means, stds;
 
 public:
-    vector<vector<TensorPtr>> fit_transform_to_tensors(const vector<vector<any>> &X) {
-        vector<vector<double>> X_scaled = fit_transform(X);
-        return to_2d_tensors(X_scaled);
-    }
-
-    vector<vector<TensorPtr>> transform_to_tensors(const vector<vector<any>> &X) {
-        vector<vector<double>> X_scaled = transform(X);
-        return to_2d_tensors(X_scaled);
-    }
-
     vector<vector<double>> fit_transform(const vector<vector<any>> &X) {
         int n_samples = X.size(), n_features = X[0].size();
         means.resize(n_features, 0.0);
