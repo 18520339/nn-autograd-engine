@@ -1,10 +1,10 @@
 #pragma once
+#include "converters.hpp"
 #include "layers.hpp"
 #include "logging.hpp"
 #include "losses.hpp"
 #include "metrics.hpp"
 #include "optim.hpp"
-#include <any>
 #include <variant>
 // #include <thread>
 
@@ -16,6 +16,30 @@ private:
     function<TensorPtr(const vector<OutputType> &, const vector<OutputType> &)> loss_func;
     unordered_map<string, function<double(const vector<OutputType> &, const vector<OutputType> &)>> metric_funcs;
     unordered_map<string, vector<any>> history;
+
+    variant<TensorPtr, vector<TensorPtr>> forward(vector<double> inputs) { // Forward propagation for input features
+        vector<TensorPtr> input_tensors = doubles_to_1d_tensors(inputs);
+        for (int i = 0; i < layers.size(); ++i)
+            input_tensors = layers[i].forward(input_tensors);
+        if constexpr (is_same_v<OutputType, TensorPtr>) return input_tensors[0];
+        return input_tensors;
+    }
+
+    variant<vector<TensorPtr>, vector<vector<TensorPtr>>>
+    get_batch_tensors(const variant<vector<double>, vector<vector<int>>> &inputs, const int &batch_start, const int &last_idx) {
+        if (holds_alternative<vector<double>>(inputs)) {
+            vector<TensorPtr> batch_tensors(last_idx - batch_start);
+            for (int i = batch_start; i < last_idx; ++i)
+                batch_tensors[i - batch_start] = make_shared<Tensor>(get<0>(inputs)[i]);
+            return batch_tensors;
+        }
+        int n_cols = get<1>(inputs)[0].size();
+        vector<vector<TensorPtr>> batch_tensors(last_idx - batch_start, vector<TensorPtr>(n_cols));
+        for (int i = batch_start; i < last_idx; ++i)
+            for (int j = 0; j < n_cols; ++j)
+                batch_tensors[i - batch_start][j] = make_shared<Tensor>(get<1>(inputs)[i][j]);
+        return batch_tensors;
+    }
 
 public:
     vector<TensorPtr> &get_parameters() { return parameters; }
@@ -35,13 +59,6 @@ public:
         history = {{"epoch", {}}, {"step", {}}, {"loss", {}}};
         for (const auto &[name, _] : metric_funcs)
             history[name] = {}; // Add metric keys
-    }
-
-    variant<TensorPtr, vector<TensorPtr>> forward(vector<TensorPtr> inputs) { // Forward propagation for input features
-        for (int i = 0; i < layers.size(); ++i)
-            inputs = layers[i].forward(inputs);
-        if constexpr (is_same_v<OutputType, TensorPtr>) return inputs[0];
-        return inputs;
     }
 
     void summary() {
@@ -79,7 +96,7 @@ public:
         cout << string(total_width, '=') << endl;
     }
 
-    void train(const vector<vector<TensorPtr>> &X_train, const vector<OutputType> &y_train,
+    void train(const vector<vector<double>> &X_train, const variant<vector<double>, vector<vector<int>>> &y_train,
                const int &epochs = 100, const variant<LearningRateScheduler *, double> &learning_rate = 0.01,
                const int &batch_size = 1, const double &clip_value = 0.0) {
         int data_size = X_train.size(), steps_per_epoch = ceil(static_cast<double>(data_size) / batch_size);
@@ -100,15 +117,12 @@ public:
 
                 // Prevents index out of range when batch_size doesn't divide the data size
                 int last_idx = min(batch_start + batch_size, data_size);
-                vector<vector<TensorPtr>> X_batch(X_train.begin() + batch_start, X_train.begin() + last_idx);
-                vector<OutputType> y_batch(y_train.begin() + batch_start, y_train.begin() + last_idx);
-
-                // Forward pass
                 vector<OutputType> predictions;
-                for (const vector<TensorPtr> &inputs : X_batch)
-                    predictions.push_back(get<(is_same_v<OutputType, TensorPtr>) ? 0 : 1>(forward(inputs)));
+                for (int i = batch_start; i < last_idx; ++i) // Forward pass
+                    predictions.push_back(get<(is_same_v<OutputType, TensorPtr>) ? 0 : 1>(forward(X_train[i])));
 
                 // Backpropagation and update parameters with Gradient Descent
+                vector<OutputType> y_batch = get<(is_same_v<OutputType, TensorPtr>) ? 0 : 1>(get_batch_tensors(y_train, batch_start, last_idx));
                 TensorPtr loss = loss_func(y_batch, predictions);
                 loss->backward();
 
@@ -144,9 +158,9 @@ public:
         logger.end_training();
     }
 
-    vector<OutputType> predict(const vector<vector<TensorPtr>> &X) {
+    vector<OutputType> predict(const vector<vector<double>> &X) {
         vector<OutputType> predictions;
-        for (const vector<TensorPtr> &inputs : X)
+        for (const vector<double> &inputs : X)
             predictions.push_back(get<(is_same_v<OutputType, TensorPtr>) ? 0 : 1>(forward(inputs)));
         return predictions;
     }
