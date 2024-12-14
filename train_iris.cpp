@@ -8,15 +8,11 @@ int main() {
 
     // Standardize numerical features
     StandardScaler scaler;
-    auto X_train_scaled = scaler.fit_transform_to_tensors(X_train);
-    auto X_test_scaled = scaler.transform_to_tensors(X_test);
-
-    // One-hot encode target labels
-    const int num_classes = 3;
-    auto y_train_onehot = to_onehot_tensors(anys_to_ints(y_train), num_classes);
-    auto y_test_onehot = to_onehot_tensors(anys_to_ints(y_test), num_classes);
+    auto X_train_scaled = scaler.fit_transform(X_train);
+    auto X_test_scaled = scaler.transform(X_test);
 
     // Build a simple neural network model
+    const int num_classes = 3;
     using OutputType = vector<TensorPtr>;
     Sequential<OutputType> model(
         {Dense(X_train_scaled[0].size(), 8, "relu", Initializers::he_uniform, "Dense0"),
@@ -28,17 +24,12 @@ int main() {
     // Train the model
     int epochs = 30, batch_size = 40; // Should be divisible by X_train size
     LearningRateScheduler *lr_scheduler = new WarmUpAndDecayScheduler(0.1, 5, 10, 0.9);
-    model.train(X_train_scaled, y_train_onehot, epochs, lr_scheduler, batch_size);
-
-    // Evaluate on training data
-    vector<OutputType> y_pred_train = model.predict(X_train_scaled);
-    double accuracy_train = Metrics<OutputType>::accuracy(y_train_onehot, y_pred_train);
-    cout << "Training accuracy: " << fixed << setprecision(4) << accuracy_train << endl;
+    model.train(X_train_scaled, anys_to_1hots(y_train, num_classes), epochs, lr_scheduler, batch_size);
 
     // Evaluate on test data
     vector<OutputType> y_pred_test = model.predict(X_test_scaled);
-    double accuracy_test = Metrics<OutputType>::accuracy(y_test_onehot, y_pred_test);
-    cout << "Test accuracy: " << fixed << setprecision(4) << accuracy_test << endl;
+    double accuracy_test = Metrics<OutputType>::accuracy(anys_to_1hot_tensors(y_test, num_classes), y_pred_test);
+    cout << "Accuracy on Test set: " << fixed << setprecision(4) << accuracy_test << endl;
 
     delete lr_scheduler;
     return 0;

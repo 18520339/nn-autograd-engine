@@ -1,14 +1,12 @@
 #include "nn_autograd/models.hpp"
 
 int main() {
-    vector<vector<TensorPtr>> X_train; // Features: [2x³, 3x², -3x]
-    vector<TensorPtr> y_train;         // Target: 2x³ + 3x² - 3x
+    vector<vector<double>> X_train;
+    vector<double> y_train;
 
     for (double x = -2.0; x <= 1.0; x += 0.1) {
-        X_train.push_back({Tensor::create(2 * pow(x, 3)), // 2x³
-                           Tensor::create(3 * pow(x, 2)), // 3x²
-                           Tensor::create(-3 * x)});      // -3x
-        y_train.push_back(Tensor::create(2 * pow(x, 3) + 3 * pow(x, 2) - 3 * x));
+        X_train.push_back({2 * pow(x, 3), 3 * pow(x, 2), -3 * x}); // Features: [2x³, 3x², -3x]
+        y_train.push_back(2 * pow(x, 3) + 3 * pow(x, 2) - 3 * x);  // Target: 2x³ + 3x² - 3x
     }
 
     Sequential<TensorPtr> model( // Initialize model
