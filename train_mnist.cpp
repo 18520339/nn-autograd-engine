@@ -1,3 +1,5 @@
+#include "nn_autograd/losses.hpp"
+#include "nn_autograd/metrics.hpp"
 #include "nn_autograd/models.hpp"
 #include "nn_autograd/preprocess.hpp"
 

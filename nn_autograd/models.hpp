@@ -2,8 +2,6 @@
 #include "converters.hpp"
 #include "layers.hpp"
 #include "logging.hpp"
-#include "losses.hpp"
-#include "metrics.hpp"
 #include "optim.hpp"
 #include <variant>
 // #include <thread>

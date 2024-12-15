@@ -1,3 +1,4 @@
+#include "nn_autograd/losses.hpp"
 #include "nn_autograd/models.hpp"
 
 int main() {
