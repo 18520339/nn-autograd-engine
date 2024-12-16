@@ -11,6 +11,7 @@
 template <typename OutputType>
 class Sequential {
 private:
+    static constexpr int output_index = is_same_v<OutputType, TensorPtr> ? 0 : 1;
     vector<TensorPtr> parameters;
     vector<Dense> layers; // Currently only support Fully connected layers
     function<TensorPtr(const vector<OutputType> &, const vector<OutputType> &)> loss_func;
@@ -131,13 +132,13 @@ public:
                 vector<OutputType> predictions;
 
                 for (int i = batch_start; i < last_idx; ++i) {
-                    OutputType forward_result = get<(is_same_v<OutputType, TensorPtr>) ? 0 : 1>(forward(X_train[i]));
+                    OutputType forward_result = get<output_index>(forward(X_train[i]));
                     y_preds_data.push_back(convert_output_to_data(forward_result));
                     predictions.push_back(forward_result);
                 }
 
                 // Backpropagation to calculate gradients
-                vector<OutputType> y_batch = get<(is_same_v<OutputType, TensorPtr>) ? 0 : 1>(get_batch_tensors(y_train, batch_start, last_idx));
+                vector<OutputType> y_batch = get<output_index>(get_batch_tensors(y_train, batch_start, last_idx));
                 TensorPtr loss = loss_func(y_batch, predictions);
                 loss->backward();
 
@@ -163,7 +164,7 @@ public:
                 // Convert y_batch to the correct type for metric calculation
                 vector<conditional_t<is_same_v<OutputType, TensorPtr>, double, vector<int>>> y_trues_data;
                 for (int i = batch_start; i < last_idx; ++i)
-                    y_trues_data.push_back(get<(is_same_v<OutputType, TensorPtr>) ? 0 : 1>(y_train)[i]);
+                    y_trues_data.push_back(get<output_index>(y_train)[i]);
 
                 unordered_map<string, double> metrics;
                 for (const auto &[name, func] : metric_funcs) {
@@ -181,7 +182,7 @@ public:
     vector<PredDataType> predict(const vector<vector<double>> &X) {
         vector<PredDataType> y_preds_data;
         for (const vector<double> &inputs : X) {
-            OutputType forward_result = get<(is_same_v<OutputType, TensorPtr>) ? 0 : 1>(forward(inputs));
+            OutputType forward_result = get<output_index>(forward(inputs));
             y_preds_data.push_back(convert_output_to_data(forward_result));
         }
         return y_preds_data;
