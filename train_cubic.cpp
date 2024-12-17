@@ -1,4 +1,4 @@
-#include "nn_autograd/models.hpp"
+#include "n2n_autograd/models.hpp"
 
 int main() {
     vector<vector<double>> X_train;

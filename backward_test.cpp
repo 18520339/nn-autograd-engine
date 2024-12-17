@@ -1,4 +1,4 @@
-#include "nn_autograd/tensor.hpp"
+#include "n2n_autograd/tensor.hpp"
 
 int main() {
     auto x1 = Tensor::create(2.0, "x1"), x2 = Tensor::create(3.0, "x2");  // Inputs

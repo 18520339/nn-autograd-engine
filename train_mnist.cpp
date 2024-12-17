@@ -1,5 +1,5 @@
-#include "nn_autograd/models.hpp"
-#include "nn_autograd/preprocess.hpp"
+#include "n2n_autograd/models.hpp"
+#include "n2n_autograd/preprocess.hpp"
 
 int main() {
     // Load the MNIST dataset
